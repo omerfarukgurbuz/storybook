@@ -7,7 +7,7 @@ import { dedent } from 'ts-dedent';
 
 import { getStorybookData } from '../automigrate/helpers/mainConfigFile.ts';
 import { shortenPath } from '../util.ts';
-import { getDuplicatedDepsWarnings, hasCriticalDuplicates } from './getDuplicatedDepsWarnings.ts';
+import { getDuplicatedDepsWarnings, hasDuplicatedStorybook } from './getDuplicatedDepsWarnings.ts';
 import {
   getIncompatiblePackagesSummary,
   getIncompatibleStorybookPackages,
@@ -318,7 +318,7 @@ export async function getDoctorDiagnostics({
     'storybook',
   ]);
 
-  const mismatchingVersionMessage = hasCriticalDuplicates(installationMetadata)
+  const mismatchingVersionMessage = hasDuplicatedStorybook(installationMetadata)
     ? undefined
     : getMismatchingVersionsWarnings(installationMetadata);
 
