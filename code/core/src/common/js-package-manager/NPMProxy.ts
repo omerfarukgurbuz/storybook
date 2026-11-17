@@ -171,6 +171,8 @@ export class NPMProxy extends JsPackageManager {
         },
         cwd: this.instanceDir,
         stdio: ['pipe', 'pipe', 'ignore'],
+        // npm exits non-zero on peer dependency problems but still prints the full tree
+        reject: false,
       });
     };
 
@@ -181,8 +183,6 @@ export class NPMProxy extends JsPackageManager {
 
       return this.mapDependencies(parsedOutput, pattern);
     } catch {
-      // when --depth is higher than 0, npm can return a non-zero exit code
-      // in case the user's project has peer dependency issues. So we try again with no depth
       try {
         const childProcess = await exec({ packageDepth: 0 });
         const commandResult = typeof childProcess.stdout === 'string' ? childProcess.stdout : '';

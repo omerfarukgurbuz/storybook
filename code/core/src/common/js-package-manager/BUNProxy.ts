@@ -177,6 +177,8 @@ export class BUNProxy extends JsPackageManager {
         env: {
           FORCE_COLOR: 'false',
         },
+        // npm exits non-zero on peer dependency problems but still prints the full tree
+        reject: false,
       });
     };
 
@@ -188,8 +190,6 @@ export class BUNProxy extends JsPackageManager {
 
       return this.mapDependencies(parsedOutput, pattern);
     } catch (e) {
-      // when --depth is higher than 0, npm can return a non-zero exit code
-      // in case the user's project has peer dependency issues. So we try again with no depth
       try {
         const process = await exec({ packageDepth: 0 });
         const result = await process;

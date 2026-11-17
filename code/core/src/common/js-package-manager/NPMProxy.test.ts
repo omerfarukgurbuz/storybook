@@ -398,6 +398,62 @@ describe('NPM Proxy', () => {
       });
     });
 
+    it('keeps the deep listing when npm exits non-zero but still prints the tree (e.g. an invalid peer)', async () => {
+      mockedExecuteCommand.mockReset();
+      mockedExecuteCommand.mockResolvedValueOnce({
+        exitCode: 1,
+        failed: true,
+        stdout: JSON.stringify({
+          error: { code: 'ELSPROBLEMS' },
+          dependencies: {
+            '@acme/storybook': {
+              version: '1.0.0',
+              dependencies: {
+                storybook: { version: '11.0.0-beta.2' },
+                '@storybook/addon-docs': {
+                  version: '11.0.0-beta.2',
+                  dependencies: { storybook: { version: '10.6.7', invalid: true } },
+                },
+              },
+            },
+          },
+        }),
+      } as any);
+
+      const installations = await npmProxy.findInstallations(['@storybook/*', 'storybook']);
+
+      expect(mockedExecuteCommand).toHaveBeenCalledTimes(1);
+      expect(mockedExecuteCommand).toHaveBeenCalledWith(
+        expect.objectContaining({ args: ['ls', '--json', '--depth=99'], reject: false })
+      );
+      expect(installations?.duplicatedDependencies).toEqual({
+        storybook: ['10.6.7', '11.0.0-beta.2'],
+      });
+    });
+
+    it('retries with --depth=0 when the deep listing exits non-zero without a tree', async () => {
+      mockedExecuteCommand.mockReset();
+      mockedExecuteCommand
+        .mockResolvedValueOnce({
+          exitCode: 1,
+          failed: true,
+          stdout: JSON.stringify({ error: { code: 'EBADDEVENGINES' } }),
+        } as any)
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify({ dependencies: { '@storybook/react': { version: '1.2.3' } } }),
+        } as any);
+
+      const installations = await npmProxy.findInstallations(['@storybook/*']);
+
+      expect(mockedExecuteCommand).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ args: ['ls', '--json', '--depth=0'] })
+      );
+      expect(installations).toMatchObject({
+        dependencies: { '@storybook/react': [{ version: '1.2.3' }] },
+      });
+    });
+
     it('returns undefined and never treats stderr as the dependency source when stdout is empty', async () => {
       mockedExecuteCommand.mockReset();
       // Valid-looking JSON on stderr must never be parsed as the result.
